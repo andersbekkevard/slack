@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import json
+import glob
 import logging
 import os
 import sys
@@ -20,39 +20,40 @@ def setup_logging():
     )
 
 
-def load_messages() -> List[str]:
-    """Load messages from messages.json file."""
-    try:
-        with open('messages.json', 'r', encoding='utf-8') as f:
-            messages = json.load(f)
-        
-        if not isinstance(messages, list) or not messages:
-            raise ValueError("messages.json must contain a non-empty array of strings")
-        
-        logging.info(f"Loaded {len(messages)} messages from messages.json")
-        return messages
-    
-    except FileNotFoundError:
-        logging.error("messages.json file not found")
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        logging.error(f"Invalid JSON in messages.json: {e}")
-        sys.exit(1)
-    except ValueError as e:
-        logging.error(f"Invalid message format: {e}")
-        sys.exit(1)
-
-
-def get_week_message(messages: List[str]) -> str:
-    """Select message based on ISO week number (rotating)."""
+def load_messages_for_today() -> List[str]:
+    """Load all messages that match today's date from messages/ folder."""
     now = datetime.now(timezone.utc)
-    week_number = now.isocalendar()[1]  # ISO week number (1-53)
+    today_str = now.strftime("%d.%m.%y")  # European format: DD.MM.YY
     
-    message_index = (week_number - 1) % len(messages)
-    selected_message = messages[message_index]
+    messages = []
+    pattern = f"messages/{today_str}.txt"
     
-    logging.info(f"Week {week_number}: Selected message {message_index + 1} of {len(messages)}")
-    return selected_message
+    matching_files = glob.glob(pattern)
+    
+    if not matching_files:
+        logging.info(f"No messages found for today ({today_str})")
+        return []
+    
+    for file_path in matching_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if content:
+                    messages.append(content)
+                    logging.info(f"Loaded message from {file_path}")
+                else:
+                    logging.warning(f"Empty message file: {file_path}")
+        except Exception as e:
+            logging.error(f"Error reading {file_path}: {e}")
+            continue
+    
+    logging.info(f"Found {len(messages)} messages for {today_str}")
+    return messages
+
+
+def get_today_messages() -> List[str]:
+    """Get all messages for today's date."""
+    return load_messages_for_today()
 
 
 def post_to_slack(message: str, token: str, channel_id: str) -> bool:
@@ -88,7 +89,7 @@ def post_to_slack(message: str, token: str, channel_id: str) -> bool:
 def main():
     """Main execution function."""
     setup_logging()
-    logging.info("Starting weekly Slack bot")
+    logging.info("Starting daily Slack bot")
     
     # Get environment variables
     slack_token = os.getenv('SLACK_BOT_TOKEN')
@@ -102,20 +103,32 @@ def main():
         logging.error("SLACK_CHANNEL_ID environment variable is required")
         sys.exit(1)
     
-    # Load and select message
-    messages = load_messages()
-    message = get_week_message(messages)
+    # Load messages for today
+    messages = get_today_messages()
     
-    logging.info(f"Selected message: {message[:100]}{'...' if len(message) > 100 else ''}")
+    if not messages:
+        now = datetime.now(timezone.utc)
+        today_str = now.strftime("%d.%m.%y")
+        logging.info(f"No messages scheduled for today ({today_str}). Bot completed successfully with no action.")
+        sys.exit(0)
     
-    # Post to Slack
-    success = post_to_slack(message, slack_token, slack_channel)
+    # Post all messages for today
+    all_success = True
+    for i, message in enumerate(messages, 1):
+        logging.info(f"Posting message {i} of {len(messages)}: {message[:100]}{'...' if len(message) > 100 else ''}")
+        success = post_to_slack(message, slack_token, slack_channel)
+        
+        if not success:
+            all_success = False
+            logging.error(f"Failed to post message {i}")
+        else:
+            logging.info(f"Successfully posted message {i}")
     
-    if success:
-        logging.info("Weekly Slack bot completed successfully")
+    if all_success:
+        logging.info(f"Daily Slack bot completed successfully - posted {len(messages)} message(s)")
         sys.exit(0)
     else:
-        logging.error("Weekly Slack bot failed")
+        logging.error("Daily Slack bot completed with some failures")
         sys.exit(1)
 
 

@@ -1,15 +1,15 @@
-name: Weekly Slack Bot
+name: Daily Slack Bot
 
 on:
   schedule:
-    # Runs every Monday at 08:00 UTC
-    - cron: '0 8 * * 1'
+    # Runs every day at 08:00 UTC
+    - cron: '0 8 * * *'
   
   # Allow manual trigger for testing
   workflow_dispatch:
 
 jobs:
-  post-weekly-message:
+  post-daily-messages:
     runs-on: ubuntu-latest
     
     steps:
@@ -34,8 +34,8 @@ jobs:
       
     - name: Log completion
       if: success()
-      run: echo "Weekly Slack message posted successfully!"
+      run: echo "Daily Slack bot completed successfully!"
       
     - name: Log failure
       if: failure()
-      run: echo "Failed to post weekly Slack message. Check logs above for details."
+      run: echo "Failed to run daily Slack bot. Check logs above for details."
