@@ -15,28 +15,29 @@ def setup_logging():
     """Configure logging for GitHub Actions output."""
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
 
 def load_messages_for_today() -> List[str]:
-    """Load all messages that match today's date from messages/ folder."""
+    """Load all messages that match today's date from messages/ folder and subdirectories."""
     now = datetime.now(timezone.utc)
     today_str = now.strftime("%d.%m.%y")  # European format: DD.MM.YY
-    
+
     messages = []
-    pattern = f"messages/{today_str}.txt"
-    
-    matching_files = glob.glob(pattern)
-    
+    # Use recursive glob pattern to search in all subdirectories
+    pattern = f"messages/**/{today_str}.md"
+
+    matching_files = glob.glob(pattern, recursive=True)
+
     if not matching_files:
         logging.info(f"No messages found for today ({today_str})")
         return []
-    
+
     for file_path in matching_files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 if content:
                     messages.append(content)
@@ -46,7 +47,7 @@ def load_messages_for_today() -> List[str]:
         except Exception as e:
             logging.error(f"Error reading {file_path}: {e}")
             continue
-    
+
     logging.info(f"Found {len(messages)} messages for {today_str}")
     return messages
 
@@ -59,13 +60,10 @@ def get_today_messages() -> List[str]:
 def post_to_slack(message: str, token: str, channel_id: str) -> bool:
     """Post message to Slack channel."""
     client = WebClient(token=token)
-    
+
     try:
-        response = client.chat_postMessage(
-            channel=channel_id,
-            text=message
-        )
-        
+        response = client.chat_postMessage(channel=channel_id, text=message)
+
         if response["ok"]:
             logging.info(f"Message posted successfully to channel {channel_id}")
             logging.info(f"Message timestamp: {response['ts']}")
@@ -73,12 +71,14 @@ def post_to_slack(message: str, token: str, channel_id: str) -> bool:
         else:
             logging.error(f"Slack API returned ok=False: {response}")
             return False
-            
+
     except SlackApiError as e:
         logging.error(f"Slack API error: {e.response['error']}")
-        if e.response.get('error') == 'channel_not_found':
-            logging.error("Check that the bot is added to the channel and channel ID is correct")
-        elif e.response.get('error') == 'not_authed':
+        if e.response.get("error") == "channel_not_found":
+            logging.error(
+                "Check that the bot is added to the channel and channel ID is correct"
+            )
+        elif e.response.get("error") == "not_authed":
             logging.error("Check that SLACK_BOT_TOKEN is valid")
         return False
     except Exception as e:
@@ -90,42 +90,48 @@ def main():
     """Main execution function."""
     setup_logging()
     logging.info("Starting daily Slack bot")
-    
+
     # Get environment variables
-    slack_token = os.getenv('SLACK_BOT_TOKEN')
-    slack_channel = os.getenv('SLACK_CHANNEL_ID')
-    
+    slack_token = os.getenv("SLACK_BOT_TOKEN")
+    slack_channel = os.getenv("SLACK_CHANNEL_ID")
+
     if not slack_token:
         logging.error("SLACK_BOT_TOKEN environment variable is required")
         sys.exit(1)
-    
+
     if not slack_channel:
         logging.error("SLACK_CHANNEL_ID environment variable is required")
         sys.exit(1)
-    
+
     # Load messages for today
     messages = get_today_messages()
-    
+
     if not messages:
         now = datetime.now(timezone.utc)
         today_str = now.strftime("%d.%m.%y")
-        logging.info(f"No messages scheduled for today ({today_str}). Bot completed successfully with no action.")
+        logging.info(
+            f"No messages scheduled for today ({today_str}). Bot completed successfully with no action."
+        )
         sys.exit(0)
-    
+
     # Post all messages for today
     all_success = True
     for i, message in enumerate(messages, 1):
-        logging.info(f"Posting message {i} of {len(messages)}: {message[:100]}{'...' if len(message) > 100 else ''}")
+        logging.info(
+            f"Posting message {i} of {len(messages)}: {message[:100]}{'...' if len(message) > 100 else ''}"
+        )
         success = post_to_slack(message, slack_token, slack_channel)
-        
+
         if not success:
             all_success = False
             logging.error(f"Failed to post message {i}")
         else:
             logging.info(f"Successfully posted message {i}")
-    
+
     if all_success:
-        logging.info(f"Daily Slack bot completed successfully - posted {len(messages)} message(s)")
+        logging.info(
+            f"Daily Slack bot completed successfully - posted {len(messages)} message(s)"
+        )
         sys.exit(0)
     else:
         logging.error("Daily Slack bot completed with some failures")

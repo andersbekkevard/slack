@@ -1,5 +1,0 @@
-Rentekurven kan virke kjedelig ved første øyekast, men den bærer hemmeligheter.
-Når den "inverterer", betyr det at markedet priser kortsiktige lån dyrere enn langsiktige.
-Historisk har dette vært et varselsignal om resesjon.
-Et enkelt linjediagram kan altså fortelle oss mye om økonomiens fremtid.
-📚 Les mer: https://corporatefinanceinstitute.com/resources/capital-markets/yield-curve/

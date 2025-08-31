@@ -1,0 +1,3 @@
+- [ ] Flere forskjellige kanaler
+- [ ] Alle datoer for kvartalsrapporter til selskapene i porteføljen
+- [ ] Automatisert LLM-generering av meldinger?

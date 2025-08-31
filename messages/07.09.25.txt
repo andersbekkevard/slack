@@ -1,5 +1,0 @@
-Opsjoner kan virke mystiske, men egentlig er de bare kontrakter.
-Et "call" gir deg retten til å kjøpe, et "put" retten til å selge.
-De kan brukes til å beskytte en portefølje eller spekulere på fremtidige bevegelser.
-Når du først forstår grunnprinsippene, åpnes en helt ny verktøykasse.
-📚 Les mer: https://corporatefinanceinstitute.com/resources/derivatives/options-basics/
