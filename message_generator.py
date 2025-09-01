@@ -42,7 +42,7 @@ CONFIG = {
     "NUM_PROPOSALS": 3,  # number of alternative drafts to generate
     # Length guidance (word counts are soft targets for the LLM)
     # one of: short (~60-120 words), medium (~120-220), long (~220-400)
-    "TARGET_LENGTH": "medium",
+    "TARGET_LENGTH": "short",
     # Context controls
     "INCLUDE_PREVIOUS_MESSAGES": True,
     "NUM_PREVIOUS_FILES": 5,  # how many recent files to include
@@ -54,7 +54,7 @@ CONFIG = {
     "OUTPUT_DIR": "inbox",
     "FILENAME_PREFIX": "proposal",
     # If set, will be used as part of the filename (e.g. category_hint-proposal-1.md)
-    "CATEGORY_HINT": "multippel",  # e.g. "multippel", "misc", "growth"
+    "CATEGORY_HINT": "none",  # e.g. "multippel", "misc", "growth"
     # Language & style
     "LANGUAGE": "Norwegian",  # e.g. "Norwegian", "English"
     "STYLE_NOTES": (
@@ -63,10 +63,10 @@ CONFIG = {
         "Ingen kodeblokker, ingen overskrifter med #, og ingen metadata. Begynn direkte på innholdet."
     ),
     # Your prompt (edit these for each generation run)
-    "PROMPT_TITLE": "Mandagens Multippel: EV/EBITDA vs EV/EBIT",  # optional hint for filename/topic
+    "PROMPT_TITLE": "Mandagens Multippel",  # optional hint for filename/topic
     "PROMPT_BODY": (
-        "Lag en pedagogisk Slack-post som forklarer forskjellen mellom EV/EBIT og EV/EBITDA, "
-        "når hver brukes, og vanlige feilkilder. Inkluder et kort eksempel."
+        "Lag en pedagogisk Slack-post som forklarer en multippel, "
+        "når den brukes, og vanlige feilkilder. Inkluder et kort eksempel."
     ),
 }
 
