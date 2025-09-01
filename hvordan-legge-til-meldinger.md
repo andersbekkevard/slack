@@ -5,7 +5,7 @@
 3. **Skriv meldingen** i filen
 4. **Last opp** filen til GitHub
 
-Roboten sjekker hver dag klokka 08:00 UTC og sender meldinger som matcher dagens dato.
+Boten sjekker hver dag klokka 08:00 UTC og sender meldinger som matcher dagens dato.
 
 ### Eksempel
 - Fil: `25.12.25.md`
