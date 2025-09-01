@@ -37,8 +37,8 @@ CONFIG = {
     # Authentication
     "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
     # Model settings
-    "MODEL": "gpt-4o-mini",  # e.g. gpt-4o, gpt-4o-mini, gpt-4.1-mini
-    "TEMPERATURE": 0.8,
+    "MODEL": "gpt-5",  # e.g. gpt-4o, gpt-4o-mini, gpt-4.1-mini
+    "TEMPERATURE": 1,
     "NUM_PROPOSALS": 3,  # number of alternative drafts to generate
     # Length guidance (word counts are soft targets for the LLM)
     # one of: short (~60-120 words), medium (~120-220), long (~220-400)

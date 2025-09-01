@@ -67,3 +67,7 @@ slack_config.json
 
 # GitHub Actions
 .github/workflows/.env
+
+
+testing.py
+.claude/

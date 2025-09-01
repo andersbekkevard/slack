@@ -1,22 +1,33 @@
-# Indøk Finance Club Slack Bot
+# Indøk Finance Club Slack Bot & Message Generator
 
-A scheduled messaging bot that delivers educational content and notifications to Indøk Finance club members through automated daily posts.
+A comprehensive system for generating and delivering educational content to Indøk Finance club members through both automated daily posts and AI-powered content generation.
 
-## Purpose
+## System Components
 
-The bot serves two main functions:
-1. **Educational Content Queue**: Delivers scheduled educational messages about finance concepts and investment strategies
-2. **Portfolio Company Notifications**: Alerts club members when portfolio companies release quarterly reports
+### 1. Slack Bot (`slack_bot.py`)
+Automated daily messaging bot that delivers scheduled content to Slack channels.
+
+### 2. Message Generator (`message_generator.py`) 
+AI-powered tool that generates educational content proposals using OpenAI's API for review and scheduling.
+
+### 3. Testing Utilities (`testing.py`)
+Development tools for testing OpenAI API connectivity and streaming functionality.
 
 ## How It Works
 
-### Message Scheduling
+### Automated Message Delivery
 - Messages are stored as individual `.md` files in the `messages/` directory
 - Files are named using European date format: `DD.MM.YY.md`
 - The bot runs daily at 08:00 UTC and checks for files matching today's date
 - Channel selection per message folder:
   - If a subfolder contains a file named `SLACK_CHANNEL_ID`, its first non-empty line is used as the channel ID for messages in that folder
   - Otherwise, the bot uses the default from environment: `SLACK_CHANNEL_ID` or `CHANNEL_ID`
+
+### AI Content Generation
+- Configure topics, style, and parameters in `message_generator.py`
+- Generates multiple content proposals using OpenAI API
+- Outputs markdown files to `inbox/` directory for review
+- Includes context from previous messages and message ideas for consistency
 
 ### File Structure
 ```
@@ -29,10 +40,13 @@ messages/
     ├── 08.09.25.md # EV/EBIT analysis
     └── ...         # Additional educational content
 
+inbox/              # Generated content proposals for review
+├── multippel-proposal-1-20250901-231420.md
+├── multippel-proposal-2-20250901-231453.md
+└── multippel-proposal-3-20250901-231531.md
 ```
 
 To target a specific Slack channel for all messages in a folder, add a file named `SLACK_CHANNEL_ID` in that folder containing the channel ID (e.g. `C0123456789`). The bot will use this value for messages in that folder.
-```
 
 ## Adding Messages
 
