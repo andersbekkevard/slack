@@ -7,6 +7,10 @@
 
 Boten sjekker hver dag klokka 08:00 UTC og sender meldinger som matcher dagens dato.
 
+## Velg Slack-kanal per mappe (valgfritt)
+
+Hvis en undermappe i `messages/` inneholder en fil kalt `SLACK_CHANNEL_ID`, vil meldinger i den mappen sendes til kanalen angitt i denne filen (første ikke-tomme linje). Hvis filen ikke finnes, brukes standardkanalen fra miljøvariablene `SLACK_CHANNEL_ID` eller `CHANNEL_ID`.
+
 ### Eksempel
 - Fil: `25.12.25.md`
 - Innhold: "God jul!"

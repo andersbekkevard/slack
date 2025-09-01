@@ -14,6 +14,9 @@ The bot serves two main functions:
 - Messages are stored as individual `.md` files in the `messages/` directory
 - Files are named using European date format: `DD.MM.YY.md`
 - The bot runs daily at 08:00 UTC and checks for files matching today's date
+- Channel selection per message folder:
+  - If a subfolder contains a file named `SLACK_CHANNEL_ID`, its first non-empty line is used as the channel ID for messages in that folder
+  - Otherwise, the bot uses the default from environment: `SLACK_CHANNEL_ID` or `CHANNEL_ID`
 
 ### File Structure
 ```
@@ -25,6 +28,10 @@ messages/
     ├── 01.09.25.md # P/E ratio explanation
     ├── 08.09.25.md # EV/EBIT analysis
     └── ...         # Additional educational content
+
+```
+
+To target a specific Slack channel for all messages in a folder, add a file named `SLACK_CHANNEL_ID` in that folder containing the channel ID (e.g. `C0123456789`). The bot will use this value for messages in that folder.
 ```
 
 ## Adding Messages
@@ -34,6 +41,8 @@ messages/
 2. **Name the file** using the target date format: `DD.MM.YY.md`
 3. **Write your message** in the file
 4. **Upload to GitHub** via pull request or direct commit
+
+Optional: To send to a specific channel for that folder, create `SLACK_CHANNEL_ID` in the folder with the desired channel ID.
 
 ### Message Examples
 
@@ -53,6 +62,7 @@ P/E er et kjent konsept i finansverden. Du tar Price, altså prisen på en aksje
 - **Schedule**: Daily at 08:00 UTC
 - **Language**: Python with Slack SDK
 - **Storage**: File-based system in Git repository
+ - **Channel resolution order**: folder `SLACK_CHANNEL_ID` file → env `SLACK_CHANNEL_ID` → env `CHANNEL_ID`
 
 ### Message Format
 - **File Type**: Markdown (`.md`)

@@ -3,39 +3,40 @@ name: Daily Slack Bot
 on:
   schedule:
     # Runs every day at 08:00 UTC
-    - cron: '0 8 * * *'
-  
+    - cron: "0 8 * * *"
+
   # Allow manual trigger for testing
   workflow_dispatch:
 
 jobs:
   post-daily-messages:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run Slack bot
-      env:
-        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
-      run: python slack_bot.py
-      
-    - name: Log completion
-      if: success()
-      run: echo "Daily Slack bot completed successfully!"
-      
-    - name: Log failure
-      if: failure()
-      run: echo "Failed to run daily Slack bot. Check logs above for details."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Slack bot
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        run: python slack_bot.py
+
+      - name: Log completion
+        if: success()
+        run: echo "Daily Slack bot completed successfully!"
+
+      - name: Log failure
+        if: failure()
+        run: echo "Failed to run daily Slack bot. Check logs above for details."

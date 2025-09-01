@@ -15,6 +15,9 @@ Requires OPENAI_API_KEY in environment, or set in CONFIG explicitly.
 import glob
 import os
 import re
+import sys
+import time
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -140,6 +143,38 @@ def _compose_context(cfg: dict) -> str:
     return context
 
 
+class _Spinner:
+    """Lightweight terminal spinner for non-interactive status feedback."""
+
+    def __init__(self, text: str = "Arbeider...") -> None:
+        self.text = text
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def __enter__(self):
+        # Initial line
+        sys.stdout.write(self.text)
+        sys.stdout.flush()
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self._stop.set()
+        self._thread.join()
+        # End line overwrite to show done
+        sys.stdout.write("\r" + self.text + " ferdig.       \n")
+        sys.stdout.flush()
+
+    def _run(self) -> None:
+        frames = "|/-\\"
+        idx = 0
+        while not self._stop.is_set():
+            sys.stdout.write("\r" + self.text + " " + frames[idx % len(frames)])
+            sys.stdout.flush()
+            time.sleep(0.1)
+            idx += 1
+
+
 def _build_system_prompt(cfg: dict) -> str:
     min_w, max_w = LENGTH_TO_WORD_RANGE.get(
         cfg.get("TARGET_LENGTH", "medium"), (120, 220)
@@ -151,7 +186,7 @@ def _build_system_prompt(cfg: dict) -> str:
         f"Du er en ekspert fagformidler som skriver for Indøk Finance Club. "
         f"Skriv på {language}. {style_notes} "
         f"Mål mot cirka {min_w}–{max_w} ord. "
-        f"Returner KUN selve Markdown-teksten for Slack, uten innpakning, overskrifter, metadata eller forklaringer."
+        f"Returner KUN selve teksten for Slack, uten innpakning, overskrifter, metadata eller forklaringer."
     )
 
 
@@ -167,13 +202,13 @@ def _build_user_prompt(cfg: dict, context: str) -> str:
         parts.append(f"Tema/Tittel: {title}")
 
     parts.append(
-        "Oppgave: Skriv en pedagogisk, konsis og nyttig Slack-vennlig Markdown-tekst om temaet."
+        "Oppgave: Skriv en pedagogisk, konsis og nyttig Slack-vennlig tekst om temaet."
     )
     parts.append(
         "Krav: Unngå repetisjon av tidligere meldinger, ingen innledende høflighetsfraser, ingen hilsener, ingen overskrift med #."
     )
     parts.append(
-        "Leveranse: Kun selve Markdown-innholdet, klar til innliming i Slack. Ikke bruk ``` eller annen innpakning."
+        "Leveranse: Kun selve innholdet, klar til innliming i Slack. Ikke bruk ``` eller annen innpakning."
     )
 
     if body:
@@ -230,17 +265,29 @@ def _write_markdown(cfg: dict, text: str, index: int) -> Path:
 
 
 def generate_messages(cfg: dict) -> List[Path]:
+    print(
+        f"Starter generering | Modellen: {cfg.get('MODEL')} | Forslag: {cfg.get('NUM_PROPOSALS')} | Lengde: {cfg.get('TARGET_LENGTH')}"
+    )
+
+    print("Sammensetter kontekst...")
     context = _compose_context(cfg)
+    print(f"Kontekst klar ({len(context)} tegn).")
+
+    print("Bygger prompt...")
     system_prompt = _build_system_prompt(cfg)
     user_prompt = _build_user_prompt(cfg, context)
+    print("Prompt klar.")
 
     outputs: List[Path] = []
     num = int(cfg.get("NUM_PROPOSALS", 1))
     for i in range(max(1, num)):
-        draft = _call_openai(cfg, system_prompt, user_prompt)
+        step = f"Genererer forslag {i+1}/{num} (kaller OpenAI)"
+        with _Spinner(step):
+            draft = _call_openai(cfg, system_prompt, user_prompt)
         if not draft:
             continue
         path = _write_markdown(cfg, draft, i)
+        print(f"Lagret: {path.as_posix()}")
         outputs.append(path)
     return outputs
 

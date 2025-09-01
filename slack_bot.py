@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional, Tuple
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -20,12 +20,31 @@ def setup_logging():
     )
 
 
-def load_messages_for_today() -> List[str]:
-    """Load all messages that match today's date from messages/ folder and subdirectories."""
+def _read_channel_id_from_directory(directory_path: str) -> Optional[str]:
+    """Return channel ID from a `SLACK_CHANNEL_ID` file inside the given directory if present."""
+    try:
+        candidate_path = os.path.join(directory_path, "SLACK_CHANNEL_ID")
+        if os.path.exists(candidate_path) and os.path.isfile(candidate_path):
+            with open(candidate_path, "r", encoding="utf-8") as f:
+                # Use the first non-empty line as the channel id
+                for line in f:
+                    channel_id = line.strip()
+                    if channel_id:
+                        return channel_id
+    except Exception as e:
+        logging.warning(f"Failed reading SLACK_CHANNEL_ID in {directory_path}: {e}")
+    return None
+
+
+def load_messages_for_today() -> List[Tuple[str, Optional[str], str]]:
+    """Load all messages for today's date along with per-folder channel overrides.
+
+    Returns list of tuples: (message_text, channel_id_override, source_file_path)
+    """
     now = datetime.now(timezone.utc)
     today_str = now.strftime("%d.%m.%y")  # European format: DD.MM.YY
 
-    messages = []
+    messages: List[Tuple[str, Optional[str], str]] = []
     # Use recursive glob pattern to search in all subdirectories
     pattern = f"messages/**/{today_str}.md"
 
@@ -40,8 +59,16 @@ def load_messages_for_today() -> List[str]:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 if content:
-                    messages.append(content)
-                    logging.info(f"Loaded message from {file_path}")
+                    # Determine channel override from the message's directory
+                    directory = os.path.dirname(file_path)
+                    channel_override = _read_channel_id_from_directory(directory)
+                    messages.append((content, channel_override, file_path))
+                    if channel_override:
+                        logging.info(
+                            f"Loaded message from {file_path} with folder-specific channel override"
+                        )
+                    else:
+                        logging.info(f"Loaded message from {file_path}")
                 else:
                     logging.warning(f"Empty message file: {file_path}")
         except Exception as e:
@@ -52,8 +79,8 @@ def load_messages_for_today() -> List[str]:
     return messages
 
 
-def get_today_messages() -> List[str]:
-    """Get all messages for today's date."""
+def get_today_messages() -> List[Tuple[str, Optional[str], str]]:
+    """Get all messages for today's date with potential channel overrides and source file path."""
     return load_messages_for_today()
 
 
@@ -93,15 +120,19 @@ def main():
 
     # Get environment variables
     slack_token = os.getenv("SLACK_BOT_TOKEN")
-    slack_channel = os.getenv("SLACK_CHANNEL_ID")
+    # Default channel ID can be provided via either environment variable for convenience
+    # Prefer CHANNEL_ID, fallback to SLACK_CHANNEL_ID for backward compatibility
+    slack_channel = os.getenv("CHANNEL_ID") or os.getenv("SLACK_CHANNEL_ID")
 
     if not slack_token:
         logging.error("SLACK_BOT_TOKEN environment variable is required")
         sys.exit(1)
 
     if not slack_channel:
-        logging.error("SLACK_CHANNEL_ID environment variable is required")
-        sys.exit(1)
+        logging.warning(
+            "No default channel set (SLACK_CHANNEL_ID/CHANNEL_ID). "
+            "Messages must specify a folder-level SLACK_CHANNEL_ID file."
+        )
 
     # Load messages for today
     messages = get_today_messages()
@@ -116,11 +147,27 @@ def main():
 
     # Post all messages for today
     all_success = True
-    for i, message in enumerate(messages, 1):
-        logging.info(
-            f"Posting message {i} of {len(messages)}: {message[:100]}{'...' if len(message) > 100 else ''}"
-        )
-        success = post_to_slack(message, slack_token, slack_channel)
+    for i, (message_text, channel_override, source_path) in enumerate(messages, 1):
+        channel_to_use = channel_override or slack_channel
+        preview = message_text[:100] + ("..." if len(message_text) > 100 else "")
+        if channel_override:
+            logging.info(
+                f"Posting message {i} of {len(messages)} (override from folder): {preview}"
+            )
+        else:
+            logging.info(
+                f"Posting message {i} of {len(messages)} (default channel): {preview}"
+            )
+
+        if not channel_to_use:
+            logging.error(
+                f"No channel ID available for message {i} from {source_path}. "
+                f"Provide SLACK_CHANNEL_ID/CHANNEL_ID env or a folder-level SLACK_CHANNEL_ID file."
+            )
+            all_success = False
+            continue
+
+        success = post_to_slack(message_text, slack_token, channel_to_use)
 
         if not success:
             all_success = False
