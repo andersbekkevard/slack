@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import shutil
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -30,6 +31,24 @@ def get_paths() -> Dict[str, str]:
         "reports": os.path.join(root_dir, "reports.json"),
         "out_dir": os.path.join(root_dir, "messages", "diskusjon"),
     }
+
+
+def rename_reports_file_after_parsing(reports_path: str) -> str:
+    """Rename the reports.json file to indicate it has been parsed."""
+    if not os.path.exists(reports_path):
+        return reports_path
+
+    # Create backup filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = reports_path.replace(".json", f"_parsed_{timestamp}.json")
+
+    try:
+        shutil.move(reports_path, backup_path)
+        logging.info(f"Renamed {reports_path} to {backup_path} after parsing")
+        return backup_path
+    except Exception as e:
+        logging.error(f"Failed to rename reports file: {e}")
+        return reports_path
 
 
 def load_reports(reports_path: str) -> Dict[str, Dict[str, Optional[str]]]:
@@ -177,6 +196,9 @@ def main() -> None:
     logging.info(
         f"Prepared reminder files for {written} day(s) in 'messages/diskusjon'"
     )
+
+    # Rename the reports.json file to indicate it has been parsed
+    rename_reports_file_after_parsing(paths["reports"])
 
 
 if __name__ == "__main__":

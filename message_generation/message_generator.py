@@ -46,7 +46,7 @@ CONFIG = {
     # Context controls
     "INCLUDE_PREVIOUS_MESSAGES": True,
     "NUM_PREVIOUS_FILES": 5,  # how many recent files to include
-    "PREVIOUS_MESSAGES_GLOB": "messages/**/*.md",
+    "PREVIOUS_MESSAGES_GLOB": "../messages/**/*.md",
     "INCLUDE_MESSAGE_IDEAS": True,
     "MESSAGE_IDEAS_PATH": "message-ideas.md",
     "MAX_CONTEXT_CHARS": 16000,  # hard cap on composed context size
