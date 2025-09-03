@@ -8,9 +8,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
 
-# Message format (Norwegian)
-# Example output:
-# "Hei alle! MOWI slipper 3.kvartalsrapport 05.11.2025. Analysegruppen har analyseansvar, men alle oppfordres til å følge med."
+# Message format
 MESSAGE_TEMPLATE = (
     "Hei alle! {selskap} slipper {kvartal}.kvartalsrapport {dato}. "
     "{gruppe} har analyseansvar, men alle oppfordres til å følge med."
@@ -84,6 +82,16 @@ def parse_quarter_from_key(key: str) -> Optional[int]:
 def to_date(iso_date_str: str) -> date:
     # reports.json dates are in YYYY-MM-DD
     return date.fromisoformat(iso_date_str)
+
+
+def safe_to_date(iso_date_str: Optional[str]) -> Optional[date]:
+    """Parse a date safely; return None if invalid."""
+    if not iso_date_str:
+        return None
+    try:
+        return to_date(iso_date_str)
+    except Exception:
+        return None
 
 
 def reminder_date(report_date: date) -> date:
@@ -160,6 +168,9 @@ def main() -> None:
     # Collect reminders grouped by reminder date
     reminders: Dict[date, List[str]] = {}
 
+    success_count = 0
+    error_count = 0
+
     for ticker, quarters in data.items():
         if not isinstance(quarters, dict):
             logging.warning(
@@ -169,19 +180,30 @@ def main() -> None:
         for qkey, iso_dt in quarters.items():
             if not iso_dt:
                 continue  # skip null / missing dates
+            qnum = parse_quarter_from_key(qkey)
+            if qnum is None:
+                logging.warning(
+                    f"Could not parse quarter from key '{qkey}' for {ticker}; skipping"
+                )
+                error_count += 1
+                continue
+
+            rpt_dt = safe_to_date(iso_dt)
+            if rpt_dt is None:
+                logging.warning(
+                    f"Skipping {ticker} {qkey}: invalid date '{iso_dt}'"
+                )
+                error_count += 1
+                continue
+
             try:
-                qnum = parse_quarter_from_key(qkey)
-                if qnum is None:
-                    logging.warning(
-                        f"Could not parse quarter from key '{qkey}' for {ticker}; skipping"
-                    )
-                    continue
-                rpt_dt = to_date(iso_dt)
                 rmd_dt = reminder_date(rpt_dt)
                 msg = build_message(ticker, qnum, rpt_dt, group_name)
                 reminders.setdefault(rmd_dt, []).append(msg)
+                success_count += 1
             except Exception as e:
                 logging.warning(f"Skipping {ticker} {qkey}='{iso_dt}': {e}")
+                error_count += 1
 
     if not reminders:
         logging.info("No reminders to schedule (no upcoming report dates found)")
@@ -196,6 +218,11 @@ def main() -> None:
     logging.info(
         f"Prepared reminder files for {written} day(s) in 'messages/diskusjon'"
     )
+
+    # Summary of processing
+    logging.info(f"Successfully processed {success_count} report events")
+    if error_count > 0:
+        logging.warning(f"Skipped {error_count} report events due to errors")
 
     # Rename the reports.json file to indicate it has been parsed
     rename_reports_file_after_parsing(paths["reports"])
